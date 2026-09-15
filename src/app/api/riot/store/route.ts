@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPlayerStorefront, generateDemoStoreData } from '@/lib/riot';
 import { RiotSession } from '@/types/valorant';
 
+export const preferredRegion = ['sin1'];
 export async function POST(request: Request) {
   try {
     const body = await request.json();

@@ -272,7 +272,7 @@ export async function completeRiotSession(accessToken: string, region: Region): 
  */
 export async function getPlayerStorefront(session: RiotSession): Promise<DailyStoreData> {
   const { puuid, accessToken, entitlementsToken, region, gameName, tagLine } = session;
-  const shard = session.shard || REGION_SHARDS[region]?.shard || 'na';
+  const shard = session.shard || (region ? REGION_SHARDS[region]?.shard : undefined) || 'ap';
 
   // Get Client Version
   let clientVersion = 'release-13.05-shipping-11-5350494';
