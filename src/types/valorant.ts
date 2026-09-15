@@ -76,6 +76,7 @@ export interface DailyStoreData {
   nightMarket?: NightMarketData | null;
   featuredBundle?: FeaturedBundleData | null;
   isDemo?: boolean;
+  debugData?: any;
 }
 
 export interface RiotSession {

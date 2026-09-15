@@ -336,8 +336,13 @@ export default function Home() {
             <span>Inspired by staciax/valorant-discord-bot</span>
           </div>
 
-          <div className="text-[11px] text-[#5b6770]">
-            Riot Games, VALORANT, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+          <div className="text-[11px] text-[#5b6770] flex flex-col items-center sm:items-end">
+            <span>Riot Games, VALORANT, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</span>
+            {storeData?.debugData && (
+              <span className="text-xs text-red-500 font-mono mt-2 bg-red-500/10 px-2 py-1 rounded">
+                DEBUG: Shard={storeData.debugData.shard}, URL={storeData.debugData.sUrl}, VP_API={storeData.debugData.vpFromRiot}, Reg={storeData.debugData.sessionRegion}
+              </span>
+            )}
           </div>
         </div>
       </footer>
