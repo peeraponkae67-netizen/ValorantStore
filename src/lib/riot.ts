@@ -545,14 +545,6 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
     nightMarket,
     featuredBundle,
     isDemo: false,
-    debugData: {
-      shard,
-      sUrl,
-      wUrl,
-      sessionRegion: session.region,
-      sessionShard: session.shard,
-      vpFromRiot: walletJson?.Balances?.['85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741'],
-    }
   };
 }
 
