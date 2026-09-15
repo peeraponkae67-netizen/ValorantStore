@@ -271,7 +271,8 @@ export async function completeRiotSession(accessToken: string, region: Region): 
  * Fetches player storefront, wallet, and returns DailyStoreData
  */
 export async function getPlayerStorefront(session: RiotSession): Promise<DailyStoreData> {
-  const { shard, puuid, accessToken, entitlementsToken, region, gameName, tagLine } = session;
+  const { puuid, accessToken, entitlementsToken, region, gameName, tagLine } = session;
+  const shard = session.shard || REGION_SHARDS[region]?.shard || 'na';
 
   // Get Client Version
   let clientVersion = 'release-13.05-shipping-11-5350494';
