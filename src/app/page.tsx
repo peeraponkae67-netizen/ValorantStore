@@ -13,6 +13,7 @@ import { WishlistModal } from '@/components/WishlistModal';
 import { LoginModal } from '@/components/LoginModal';
 import { DEMO_ROTATION_SKINS } from '@/lib/constants';
 import { Sparkles, Moon, Layers, ShieldCheck, Flame } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Home() {
   const [session, setSession] = useState<RiotSession | null>(null);
@@ -26,6 +27,8 @@ export default function Home() {
 
   // Active section tab: 'store' | 'nightmarket' | 'bundle'
   const [activeSection, setActiveSection] = useState<'store' | 'nightmarket' | 'bundle'>('store');
+
+  const { t } = useLanguage();
 
   // Inspection modal
   const [inspectingSkin, setInspectingSkin] = useState<SkinOffer | null>(null);
@@ -190,6 +193,7 @@ export default function Home() {
               playerTag={storeData.player.tag}
               initialSecondsRemaining={storeData.remainingDuration}
               resetTimestamp={storeData.resetTimestamp}
+              wallet={storeData.wallet}
             />
 
             {/* Navigation Tabs for Features */}
@@ -197,28 +201,28 @@ export default function Home() {
               <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto py-1">
                 <button
                   onClick={() => setActiveSection('store')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all font-mono ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all ${
                     activeSection === 'store'
                       ? 'bg-[#ff4655] text-white shadow-[0_0_15px_rgba(255,70,85,0.4)]'
                       : 'bg-[#111a22] text-[#8b978f] hover:text-white border border-[#23303d]'
                   }`}
                 >
                   <Flame className="w-4 h-4" />
-                  <span>Daily Rotation</span>
+                  <span>{t.store.dailyRotation}</span>
                 </button>
 
                 {storeData.nightMarket && (
                   <button
                     onClick={() => setActiveSection('nightmarket')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all font-mono ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all ${
                       activeSection === 'nightmarket'
                         ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]'
                         : 'bg-[#111a22] text-[#8b978f] hover:text-white border border-[#23303d]'
                     }`}
                   >
                     <Moon className="w-4 h-4 text-indigo-400" />
-                    <span>Night Market</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 rounded">
+                    <span>{t.store.nightMarket}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 rounded font-mono">
                       6
                     </span>
                   </button>
@@ -227,14 +231,14 @@ export default function Home() {
                 {storeData.featuredBundle && (
                   <button
                     onClick={() => setActiveSection('bundle')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all font-mono ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all ${
                       activeSection === 'bundle'
-                        ? 'bg-[#f1b82d] text-[#0b1015] font-extrabold shadow-[0_0_15px_rgba(241,184,45,0.4)]'
+                        ? 'bg-[#f1b82d] text-[#0b1015] shadow-[0_0_15px_rgba(241,184,45,0.4)]'
                         : 'bg-[#111a22] text-[#8b978f] hover:text-white border border-[#23303d]'
                     }`}
                   >
                     <Layers className="w-4 h-4" />
-                    <span>Featured Bundle</span>
+                    <span>{t.store.featuredBundle}</span>
                   </button>
                 )}
               </div>
@@ -249,16 +253,16 @@ export default function Home() {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs uppercase font-bold tracking-widest text-[#8b978f] font-mono">
-                          TODAY'S 4 WEAPON OFFERS
+                        <span className="text-xs uppercase font-black tracking-widest text-[#8b978f]">
+                          {t.store.todayOffers}
                         </span>
                       </div>
-                      <span className="text-xs text-[#8b978f] font-mono">
-                        Click any weapon to inspect chromas & levels
+                      <span className="text-xs font-bold text-[#8b978f]">
+                        {t.store.clickToInspect}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                       {storeData.offers.map((skin) => (
                         <SkinCard
                           key={skin.uuid}

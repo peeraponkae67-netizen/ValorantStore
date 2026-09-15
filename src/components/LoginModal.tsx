@@ -5,6 +5,10 @@ import { Region, RiotSession } from '@/types/valorant';
 import { REGION_SHARDS } from '@/lib/constants';
 import { Lock, User, Key, Globe, ShieldAlert, Sparkles, AlertCircle, ArrowRight, CheckCircle2, ExternalLink } from 'lucide-react';
 
+import { useLanguage } from '@/contexts/LanguageContext';
+
+import Image from 'next/image';
+
 interface LoginModalProps {
   onLoginSuccess: (session: RiotSession | null, isDemo: boolean, demoConfig?: { name: string; tag: string; region: Region }) => void;
   isLoading: boolean;
@@ -12,6 +16,7 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoading, externalError }) => {
+  const { t } = useLanguage();
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,21 +70,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoadin
   const riotAuthUrl =
     'https://auth.riotgames.com/authorize?redirect_uri=https%3A%2F%2Fplayvalorant.com%2Fopt_in&client_id=play-valorant-web-prod&response_type=token%20id_token&nonce=1&scope=account%20openid&prompt=login';
 
-
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-lg bg-[#0F1923] border border-[#23303d] rounded-2xl shadow-2xl overflow-hidden">
         {/* Top Header */}
         <div className="relative p-6 sm:p-8 bg-gradient-to-b from-[#15222E] to-[#0F1923] border-b border-[#23303d] text-center">
-          <div className="mx-auto w-14 h-14 bg-[#ff4655] vlr-cut flex items-center justify-center text-white font-black text-2xl shadow-[0_0_20px_rgba(255,70,85,0.4)] mb-4">
-            V
+          <div className="mx-auto relative w-16 h-16 mb-4">
+            <Image src="/logo.jpg" alt="Valorant Logo" fill priority className="object-cover rounded-full shadow-[0_0_20px_rgba(255,70,85,0.4)]" />
           </div>
           <h2 className="text-2xl font-black uppercase text-white font-mono tracking-wider">
-            VALORANT DAILY STORE
+            {t.login.title}
           </h2>
           <p className="text-xs text-[#8b978f] mt-1 max-w-sm mx-auto">
-            Log in with your Riot account to check your personalized daily storefront rotation and countdown timer.
+            {t.login.subtitle}
           </p>
         </div>
 
@@ -101,10 +104,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoadin
                   <span className="w-5 h-5 rounded-full bg-[#ff4655] text-white flex items-center justify-center text-[11px]">
                     1
                   </span>
-                  <span>เปิดหน้าล็อกอินทางการของ Riot</span>
+                  <span>{t.login.step1Title}</span>
                 </div>
                 <p className="text-[11px] text-[#8b978f]">
-                  กดปุ่มด้านล่างเพื่อล็อกอินบนเว็บแท้ของ Riot Games (ปลอดภัย 100% ไม่ต้องกรอกรหัสผ่านลงในเว็บนี้):
+                  {t.login.step1Desc}
                 </p>
                 <a
                   href={riotAuthUrl}
@@ -112,7 +115,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoadin
                   rel="noreferrer"
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#ff4655]/15 hover:bg-[#ff4655]/25 border border-[#ff4655]/40 text-[#ff4655] font-bold text-xs rounded-lg transition-colors"
                 >
-                  <span>คลิกเพื่อเปิดหน้า Login ของ Riot Games</span>
+                  <span>{t.login.step1Btn}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -122,24 +125,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoadin
                   <span className="w-5 h-5 rounded-full bg-[#ff4655] text-white flex items-center justify-center text-[11px]">
                     2
                   </span>
-                  <span>คัดลอก URL จากเบราว์เซอร์มาวาง</span>
+                  <span>{t.login.step2Title}</span>
                 </div>
                 <textarea
                   rows={3}
                   required
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="วาง URL ทั้งแถบ เช่น https://playvalorant.com/opt_in#access_token=eyJ..."
+                  placeholder={t.login.step2Placeholder}
                   className="w-full bg-[#0b1015] border border-[#23303d] focus:border-[#ff4655] rounded-xl p-3 text-xs text-white font-mono placeholder-[#5d6c77] outline-none resize-none"
                 />
                 <p className="text-[11px] text-[#8b978f] leading-relaxed">
-                  * เมื่อล็อกอินบนเว็บ Riot เสร็จ มันจะเด้งไปที่หน้า playvalorant.com <strong>ให้คุณคัดลอก (Copy) URL ทั้งหมดจากช่อง Address Bar ด้านบนสุด</strong> มาวางในช่องนี้ได้เลยครับ!
+                  {t.login.step2Note}
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#8b978f] mb-1.5">
-                  Account Region
+                  {t.login.regionLabel}
                 </label>
                 <select
                   value={region}
@@ -160,10 +163,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoadin
                 className="w-full btn-valorant py-3 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
-                  <span>กำลังดึงข้อมูล Daily Store...</span>
+                  <span>{t.login.loadingBtn}</span>
                 ) : (
                   <>
-                    <span>Log In ด้วย Token</span>
+                    <span>{t.login.loginBtn}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -175,8 +178,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, isLoadin
 
         {/* Security / Open Source Footer */}
         <div className="p-4 bg-[#080c10] border-t border-[#23303d] text-[11px] text-[#8b978f] flex items-center justify-between">
-          <span>Non-commercial open source client</span>
-          <span className="text-[#ff4655] font-semibold">staciax/valorant-discord-bot</span>
+          <span>Non-commercial client</span>
+          <a href="https://www.instagram.com/peerap0nn_/" target="_blank" rel="noreferrer" className="text-[#ff4655] font-semibold hover:underline">
+            by @peerap0nn_
+          </a>
         </div>
       </div>
     </div>

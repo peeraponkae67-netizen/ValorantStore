@@ -6,6 +6,8 @@ import { DailyStoreData } from '@/types/valorant';
 import { VALORANT_CURRENCIES } from '@/lib/constants';
 import { LogOut, RefreshCw, Bookmark, LayoutGrid, MessageSquare, ExternalLink, ShieldCheck } from 'lucide-react';
 
+import { useLanguage } from '@/contexts/LanguageContext';
+
 interface NavbarProps {
   storeData: DailyStoreData | null;
   activeView: 'grid' | 'discord';
@@ -25,37 +27,48 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   isRefreshing,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[#23303d] bg-[#0b1015]/90 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Brand & Bot Reference */}
         <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center w-11 h-11 bg-[#ff4655] vlr-cut text-white font-black text-xl shadow-[0_0_15px_rgba(255,70,85,0.4)]">
-            <span>V</span>
+          <div className="relative flex items-center justify-center w-11 h-11">
+            <Image src="/logo.jpg" alt="Valorant Logo" fill priority className="object-cover rounded-full" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-extrabold tracking-wider uppercase text-white font-mono">
-                VALORANT <span className="text-[#ff4655]">STORE</span>
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-wider uppercase text-white font-mono whitespace-nowrap">
+                {t.navbar.title.split(' ')[0]} <span className="text-[#ff4655]">{t.navbar.title.split(' ')[1]}</span>
               </h1>
               <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] uppercase font-bold tracking-widest bg-[#1f2e3d] text-[#8b978f] rounded">
-                v3.6.0 Web
+                {t.navbar.version}
               </span>
             </div>
             <a
-              href="https://github.com/staciax/valorant-discord-bot/tree/master"
+              href="https://www.instagram.com/peerap0nn_/"
               target="_blank"
               rel="noreferrer"
               className="text-xs text-[#8b978f] hover:text-[#ff4655] flex items-center gap-1 transition-colors group"
-              title="Inspired by staciax/valorant-discord-bot"
+              title="Created by @peerap0nn_"
             >
-              <span>based on staciax/valorant-discord-bot</span>
+              <span>{t.navbar.basedOn}</span>
               <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </a>
           </div>
         </div>
 
-        {/* Right Section: User & Wallet or Controls */}
+        {/* Right Section */}
+        <div className="flex items-center gap-3 sm:gap-6">
+          {/* Language Toggle */}
+          <button
+            onClick={() => setLanguage(language === 'en' ? 'th' : 'en')}
+            className="hidden sm:flex items-center gap-1.5 px-2 py-1 text-xs font-bold uppercase rounded border border-[#23303d] bg-[#111a22] text-[#8b978f] hover:text-white hover:border-[#42586e] transition-colors"
+          >
+            {language === 'en' ? '🇹🇭 TH' : '🇬🇧 EN'}
+          </button>
+
         {storeData && (
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Wallet Balances */}
@@ -126,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Action Buttons: Wishlist & Refresh */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={onOpenWishlist}
                 className="p-2 bg-[#111a22] hover:bg-[#192733] border border-[#23303d] text-[#ece8e1] rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium"
@@ -149,8 +162,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Player Profile & Logout */}
-            <div className="flex items-center gap-3 pl-2 sm:border-l sm:border-[#23303d]">
-              <div className="relative w-9 h-9 rounded bg-[#1f2e3d] overflow-hidden border border-[#23303d] flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2 sm:border-l sm:border-[#23303d]">
+              <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded bg-[#1f2e3d] overflow-hidden border border-[#23303d] flex-shrink-0">
                 <img
                   src={storeData.player.playerCard}
                   alt={storeData.player.name}
@@ -161,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                 />
               </div>
-              <div className="hidden sm:block text-left">
+              <div className="hidden md:block text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-white tracking-wide">
                     {storeData.player.name}
@@ -186,7 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 onClick={onLogout}
-                className="p-2 hover:bg-[#ff4655]/10 hover:text-[#ff4655] text-[#8b978f] rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-[#ff4655]/10 hover:text-[#ff4655] text-[#8b978f] rounded-lg transition-colors"
                 title="Log out / Switch account"
               >
                 <LogOut className="w-4 h-4" />
@@ -194,6 +207,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
     </header>
   );
