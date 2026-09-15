@@ -298,39 +298,24 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
   let storeRes: Response | null = null;
   let walletRes: Response | null = null;
   
-  const fetchPromises = SHARDS.map(async (testShard) => {
-    // Riot Games recently migrated the storefront endpoint from v2 to v3.
-    // Calling v2 now returns a 404 Not Found.
-    const sUrl = `https://pd.${testShard}.a.pvp.net/store/v3/storefront/${puuid}`;
-    const wUrl = `https://pd.${testShard}.a.pvp.net/store/v1/wallet/${puuid}`;
-    
-    const [sRes, wRes] = await Promise.all([
+  const sUrl = `https://pd.${shard}.a.pvp.net/store/v3/storefront/${puuid}`;
+  const wUrl = `https://pd.${shard}.a.pvp.net/store/v1/wallet/${puuid}`;
+  
+  try {
+    const [s, w] = await Promise.all([
       fetch(sUrl, { method: 'POST', headers: pvpHeaders, body: '{}', cache: 'no-store' }),
       fetch(wUrl, { headers: pvpHeaders, cache: 'no-store' }).catch(() => null),
     ]);
     
-    if (sRes.ok) {
-      return { storeRes: sRes, walletRes: wRes };
+    if (!s.ok) {
+      const errText = await s.text().catch(() => '');
+      throw new Error(`Shard ${shard} failed with ${s.status}: ${errText}`);
     }
     
-    // If not OK, read text to allow error logging later if needed, but throw so Promise.any catches it
-    const errText = await sRes.text().catch(() => '');
-    throw new Error(`Shard ${testShard} failed with ${sRes.status}: ${errText}`);
-  });
-
-  try {
-    const success = await Promise.any(fetchPromises);
-    storeRes = success.storeRes;
-    walletRes = success.walletRes;
+    storeRes = s;
+    walletRes = w;
   } catch (err: any) {
-    // If all shards failed, extract the exact error from one of them
-    let details = 'Unknown error';
-    if (err.errors && err.errors.length > 0) {
-      details = err.errors.map((e: Error) => e.message).join(' | ');
-    } else {
-      details = err.message;
-    }
-    throw new Error(`Riot API rejected the request for player ${gameName}#${tagLine}. Details: ${details}`);
+    throw new Error(`Riot API rejected the request for player ${gameName}#${tagLine}. Details: ${err.message}`);
   }
 
   const { skins: skinsCatalog, tiers: tiersCatalog } = await fetchValorantApiCatalog();
