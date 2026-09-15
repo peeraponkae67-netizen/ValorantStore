@@ -1,26 +1,150 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --vlr-red: #ff4655;
+  --vlr-red-hover: #e03645;
+  --vlr-dark: #0b1015;
+  --vlr-panel: #0f1923;
+  --vlr-panel-hover: #15222e;
+  --vlr-border: #23303d;
+  --vlr-white: #ece8e1;
+  --vlr-gray: #8b978f;
+  --vlr-gold: #f1b82d;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #080c10;
+  color: var(--vlr-white);
+  min-height: 100vh;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(255, 70, 85, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 100% 50%, rgba(24, 40, 56, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(15, 25, 35, 0.6) 0%, transparent 50%);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b1015;
+}
+::-webkit-scrollbar-thumb {
+  background: #23303d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff4655;
+}
+
+/* Tactical clipped corners */
+.vlr-cut {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+}
+
+.vlr-cut-tr {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    0 100%
+  );
+}
+
+.vlr-cut-bl {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+}
+
+/* Scanline and tactical grid overlays */
+.vlr-grid-bg {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Valorant button glow */
+.btn-valorant {
+  position: relative;
+  background: #ff4655;
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.btn-valorant:hover {
+  background: #e03645;
+  box-shadow: 0 0 20px rgba(255, 70, 85, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-tactical {
+  background: rgba(236, 232, 225, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ece8e1;
+  transition: all 0.2s ease;
+}
+.btn-tactical:hover {
+  background: rgba(236, 232, 225, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Pulsing radar dot */
+@keyframes radar-ping {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.radar-dot {
+  position: relative;
+}
+.radar-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: inherit;
+  animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Weapon card hover lighting */
+.weapon-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.weapon-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Flip card for night market */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
 }
