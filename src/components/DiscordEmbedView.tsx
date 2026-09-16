@@ -90,11 +90,23 @@ export const DiscordEmbedView: React.FC<DiscordEmbedViewProps> = ({
 
                 {/* Right thumbnail as in Discord embed */}
                 <div className="w-24 h-14 flex items-center justify-center flex-shrink-0 bg-[#232428] rounded p-1">
-                  <img
-                    src={skin.displayIcon}
-                    alt={skin.displayName}
-                    className="max-h-full max-w-full object-contain filter drop-shadow group-hover:scale-105 transition-transform"
-                  />
+                  {(() => {
+                    const raw = skin.displayIcon;
+                    const isBroken = !raw || raw.includes('7122d78b-4e60-eb4d-5f65-738d7c1ce9ae');
+                    const icon = isBroken
+                      ? skin.chromas?.[0]?.displayIcon ||
+                        skin.chromas?.[0]?.fullRender ||
+                        skin.levels?.[0]?.displayIcon ||
+                        'https://media.valorant-api.com/weaponskinchromas/df1786b2-4f3d-f207-b92c-0780f4dffb79/displayicon.png'
+                      : raw;
+                    return (
+                      <img
+                        src={icon}
+                        alt={skin.displayName}
+                        className="max-h-full max-w-full object-contain filter drop-shadow group-hover:scale-105 transition-transform"
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             );

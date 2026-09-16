@@ -1,19 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FeaturedBundleData } from '@/types/valorant';
 import { VALORANT_CURRENCIES } from '@/lib/constants';
-import { Sparkles, Layers, ShieldCheck } from 'lucide-react';
+import { Sparkles, Layers, ShieldCheck, Clock } from 'lucide-react';
 
 interface FeaturedBundleProps {
   bundle: FeaturedBundleData;
+  onViewCollection?: () => void;
 }
 
-export const FeaturedBundle: React.FC<FeaturedBundleProps> = ({ bundle }) => {
+export const FeaturedBundle: React.FC<FeaturedBundleProps> = ({ bundle, onViewCollection }) => {
   const discount = Math.round(((bundle.originalPrice - bundle.price) / bundle.originalPrice) * 100);
+  const [diffInSec, setDiffInSec] = useState<number>(bundle.remainingDuration || 0);
+
+  useEffect(() => {
+    setDiffInSec(bundle.remainingDuration || 0);
+    const timer = setInterval(() => {
+      setDiffInSec((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [bundle.remainingDuration]);
+
+  const days = Math.floor(diffInSec / 86400);
+  const hours = Math.floor((diffInSec % 86400) / 3600);
+  const minutes = Math.floor((diffInSec % 3600) / 60);
+  const seconds = diffInSec % 60;
+  const pad = (n: number) => n.toString().padStart(2, '0');
 
   return (
-    <div className="my-10 relative overflow-hidden rounded-2xl border border-[#23303d] bg-gradient-to-r from-[#0F1923] via-[#14222f] to-[#0F1923] p-6 sm:p-8 shadow-2xl">
+    <div className="my-6 relative overflow-hidden rounded-2xl border border-[#23303d] bg-gradient-to-r from-[#0F1923] via-[#14222f] to-[#0F1923] p-6 sm:p-8 shadow-2xl">
       {/* Background Banner Image */}
       <div className="absolute right-0 top-0 bottom-0 w-full sm:w-2/3 opacity-25 pointer-events-none overflow-hidden">
         <img
@@ -25,14 +41,25 @@ export const FeaturedBundle: React.FC<FeaturedBundleProps> = ({ bundle }) => {
       </div>
 
       <div className="relative z-10 max-w-xl space-y-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="px-2.5 py-1 rounded bg-[#f1b82d]/20 text-[#f1b82d] text-xs font-bold uppercase tracking-wider border border-[#f1b82d]/30 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             Featured Bundle
           </span>
-          <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-            Save {discount}%
-          </span>
+          {discount > 0 && (
+            <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              Save {discount}%
+            </span>
+          )}
+          {diffInSec > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0b1015]/80 border border-[#23303d] text-xs font-mono font-bold text-[#f1b82d]">
+              <Clock className="w-3.5 h-3.5 text-[#ff4655] animate-pulse" />
+              <span className="text-[#8b978f] hidden sm:inline">เหลือเวลา:</span>
+              <span className="text-white">
+                {days > 0 ? `${days} วัน ` : ''}{pad(hours)}:{pad(minutes)}:{pad(seconds)}
+              </span>
+            </div>
+          )}
         </div>
 
         <div>
@@ -78,7 +105,11 @@ export const FeaturedBundle: React.FC<FeaturedBundleProps> = ({ bundle }) => {
             </span>
           </div>
 
-          <button className="btn-valorant px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider">
+          <button
+            type="button"
+            onClick={onViewCollection}
+            className="btn-valorant px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer active:scale-95 transition-transform"
+          >
             View Collection
           </button>
         </div>

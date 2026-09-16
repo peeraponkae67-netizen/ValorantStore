@@ -98,11 +98,16 @@ export const DailyStoreBanner: React.FC<DailyStoreBannerProps> = ({
 
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white uppercase">
-              {t.banner.titlePrefix} <span className="text-[#ff4655] underline decoration-[#ff4655]/40 decoration-4 underline-offset-8 font-mono">{playerName}</span>
+              {t.banner.titlePrefix}
             </h2>
-            <span className="text-lg text-[#8b978f] font-mono font-semibold">
-              #{playerTag}
-            </span>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#ff4655] underline decoration-[#ff4655]/40 decoration-4 underline-offset-8 font-mono whitespace-nowrap uppercase">
+                {playerName}
+              </span>
+              <span className="text-lg text-[#8b978f] font-mono font-semibold">
+                #{playerTag}
+              </span>
+            </div>
           </div>
 
           <p className="text-sm text-[#8b978f] max-w-xl">

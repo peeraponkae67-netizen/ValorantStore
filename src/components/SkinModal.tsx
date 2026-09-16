@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SkinOffer } from '@/types/valorant';
 import { VALORANT_CURRENCIES } from '@/lib/constants';
-import { X, Bookmark, Volume2, Sparkles, Check, ShoppingBag } from 'lucide-react';
+import { calculateVpTopup, THAILAND_VP_PACKS } from '@/lib/vpCalculator';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { X, Bookmark, Volume2, Sparkles, Check, ShoppingBag, CreditCard, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface SkinModalProps {
@@ -23,17 +25,37 @@ export const SkinModal: React.FC<SkinModalProps> = ({
 }) => {
   const [selectedChromaIdx, setSelectedChromaIdx] = useState<number>(0);
   const [purchased, setPurchased] = useState<boolean>(false);
+  const [showPacks, setShowPacks] = useState<boolean>(false);
+
+  useEffect(() => {
+    setSelectedChromaIdx(0);
+    setShowPacks(false);
+  }, [skin?.uuid]);
 
   if (!skin) return null;
 
-  const currentChroma = skin.chromas[selectedChromaIdx] || null;
-  const currentImage =
+  const chromas = skin.chromas || [];
+  const levels = skin.levels || [];
+  const tier = skin.tier || { name: 'Standard', color: '#F1B82D', icon: '', highlightColor: '' };
+  const tierColor = tier.color || '#F1B82D';
+
+  const currentChroma = chromas[selectedChromaIdx] || chromas[0] || null;
+  const rawImage =
     currentChroma?.fullRender ||
     currentChroma?.displayIcon ||
     skin.displayIcon;
+  const currentImage =
+    rawImage && !rawImage.includes('7122d78b-4e60-eb4d-5f65-738d7c1ce9ae')
+      ? rawImage
+      : chromas?.[0]?.displayIcon ||
+        chromas?.[0]?.fullRender ||
+        levels?.[0]?.displayIcon ||
+        'https://media.valorant-api.com/weaponskinchromas/df1786b2-4f3d-f207-b92c-0780f4dffb79/displayicon.png';
 
-  const tierColor = skin.tier.color || '#F1B82D';
-  const canAfford = userVp >= skin.price;
+  const skinPrice = skin.price || 0;
+  const userBalance = userVp ?? 0;
+  const canAfford = userBalance >= skinPrice;
+  const vpCalc = calculateVpTopup(skinPrice, userBalance);
 
   const handleSimulatePurchase = () => {
     setPurchased(true);
@@ -49,7 +71,7 @@ export const SkinModal: React.FC<SkinModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-[#0F1923] border border-[#23303d] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Top Header bar with tier color */}
         <div
@@ -60,10 +82,10 @@ export const SkinModal: React.FC<SkinModalProps> = ({
         {/* Modal Top Nav */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#23303d] bg-[#0b1015]/60">
           <div className="flex items-center gap-3">
-            {skin.tier.icon && (
+            {tier.icon && (
               <img
-                src={skin.tier.icon}
-                alt={skin.tier.name}
+                src={tier.icon}
+                alt={tier.name}
                 className="w-6 h-6 object-contain"
                 style={{ filter: `drop-shadow(0 0 6px ${tierColor})` }}
               />
@@ -73,7 +95,7 @@ export const SkinModal: React.FC<SkinModalProps> = ({
                 className="text-xs font-bold uppercase tracking-widest font-mono"
                 style={{ color: tierColor }}
               >
-                {skin.tier.name} Edition
+                {tier.name} Edition
               </span>
               <h2 className="text-xl font-black text-white uppercase tracking-wide">
                 {skin.displayName}
@@ -132,13 +154,13 @@ export const SkinModal: React.FC<SkinModalProps> = ({
           </div>
 
           {/* Chroma Variant Selector */}
-          {skin.chromas.length > 1 && (
+          {chromas.length > 1 && (
             <div>
               <h4 className="text-xs uppercase font-bold tracking-widest text-[#8b978f] mb-3">
-                Color Variants ({skin.chromas.length})
+                Color Variants ({chromas.length})
               </h4>
               <div className="flex flex-wrap gap-3">
-                {skin.chromas.map((chroma, idx) => (
+                {chromas.map((chroma, idx) => (
                   <button
                     key={chroma.uuid || idx}
                     onClick={() => setSelectedChromaIdx(idx)}
@@ -155,7 +177,9 @@ export const SkinModal: React.FC<SkinModalProps> = ({
                         backgroundImage: chroma.swatch ? `url(${chroma.swatch})` : undefined,
                       }}
                     />
-                    <span>{chroma.displayName.replace(skin.displayName, '').trim() || 'Default'}</span>
+                    <span>
+                      {(chroma.displayName || '').replace(skin.displayName || '', '').trim() || 'Default'}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -163,13 +187,13 @@ export const SkinModal: React.FC<SkinModalProps> = ({
           )}
 
           {/* Skin Levels Tracker */}
-          {skin.levels.length > 0 && (
+          {levels.length > 0 && (
             <div>
               <h4 className="text-xs uppercase font-bold tracking-widest text-[#8b978f] mb-3">
-                Upgrade Progression ({skin.levels.length} Levels)
+                Upgrade Progression ({levels.length} Levels)
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {skin.levels.map((lvl, idx) => (
+                {levels.map((lvl, idx) => (
                   <div
                     key={lvl.uuid || idx}
                     className="bg-[#14202c] border border-[#23303d] p-3 rounded-xl flex flex-col justify-between text-xs"
@@ -193,6 +217,94 @@ export const SkinModal: React.FC<SkinModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* VP to THB Top-up Calculator Section */}
+          <div className="bg-[#121b24] border border-[#23303d] rounded-xl p-4.5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-[#ff4655]" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                  คำนวณการเติมเงิน (VP to THB Calculator)
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPacks((prev) => !prev)}
+                className="text-[11px] font-mono text-[#8b978f] hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span>ตารางเรทเงินไทย (THB)</span>
+                {showPacks ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {vpCalc.isEnough ? (
+              <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                <div className="text-xs leading-relaxed">
+                  <span className="font-bold">VP ของคุณเพียงพอ!</span> คุณมี {userBalance.toLocaleString()} VP (หลังซื้อจะเหลือ{' '}
+                  <span className="font-mono font-bold">{Math.max(0, userBalance - skinPrice).toLocaleString()} VP</span>)
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-[#ff4655]/10 border border-[#ff4655]/30 rounded-xl">
+                  <div>
+                    <div className="text-xs text-[#8b978f]">
+                      ยอด VP คงเหลือ: <span className="font-mono font-bold text-white">{userBalance.toLocaleString()} VP</span>
+                    </div>
+                    <div className="text-sm font-bold text-[#ff4655] mt-0.5">
+                      ขาดอีก <span className="font-mono">{vpCalc.missingVp.toLocaleString()} VP</span> จึงจะซื้อสกินนี้ได้
+                    </div>
+                  </div>
+
+                  {vpCalc.recommendedPack && (
+                    <div className="sm:text-right bg-[#0b1015]/80 p-2.5 rounded-lg border border-[#2a3848]">
+                      <div className="text-[11px] text-[#8b978f] uppercase font-mono">แนะนำแพ็กเกจเติมเงิน</div>
+                      <div className="text-base font-extrabold text-[#f1b82d] font-mono">
+                        {vpCalc.recommendedPack.thb.toLocaleString()} THB
+                        <span className="text-xs text-white/80 font-normal ml-1.5">
+                          (+{vpCalc.recommendedPack.vp.toLocaleString()} VP)
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-emerald-400 font-mono mt-0.5">
+                        หลังซื้อจะเหลือ {vpCalc.recommendedPack.remainingAfterPurchase.toLocaleString()} VP
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Expandable Rate Table */}
+            {showPacks && (
+              <div className="pt-2 border-t border-[#23303d] animate-in fade-in duration-200">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  {THAILAND_VP_PACKS.map((pack) => (
+                    <div
+                      key={pack.thb}
+                      className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                        !vpCalc.isEnough && vpCalc.recommendedPack?.thb === pack.thb
+                          ? 'bg-[#ff4655]/15 border-[#ff4655] text-white ring-1 ring-[#ff4655]'
+                          : 'bg-[#0d151c] border-[#1e2a36] text-[#8b978f]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white font-mono">{pack.thb} ฿</span>
+                        {pack.bonus && (
+                          <span className="text-[9px] px-1 py-0.5 bg-[#f1b82d]/20 text-[#f1b82d] font-bold rounded">
+                            {pack.bonus}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-mono font-semibold text-[#ece8e1] mt-1">
+                        {pack.vp.toLocaleString()} VP
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal Footer: Purchase & Details */}
@@ -207,7 +319,7 @@ export const SkinModal: React.FC<SkinModalProps> = ({
                   className="w-5 h-5 object-contain"
                 />
                 <span className="text-xl font-extrabold text-white font-mono">
-                  {skin.price.toLocaleString()}
+                  {skinPrice > 0 ? skinPrice.toLocaleString() : 'Bundle Item'}
                 </span>
               </div>
             </div>
@@ -217,9 +329,21 @@ export const SkinModal: React.FC<SkinModalProps> = ({
             <div>
               <span className="text-[11px] text-[#8b978f] uppercase font-mono">Your Balance</span>
               <div className="text-sm font-bold text-[#8b978f] font-mono">
-                {userVp.toLocaleString()} VP
+                {userBalance.toLocaleString()} VP
               </div>
             </div>
+
+            {!vpCalc.isEnough && (
+              <>
+                <div className="h-8 w-[1px] bg-[#23303d] hidden sm:block" />
+                <div className="hidden sm:block">
+                  <span className="text-[11px] text-[#ff4655] uppercase font-mono font-bold">Needs Top-up</span>
+                  <div className="text-xs font-mono text-[#ff4655]">
+                    ~{vpCalc.recommendedPack?.thb.toLocaleString()} THB
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

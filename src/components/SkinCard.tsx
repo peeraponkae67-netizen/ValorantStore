@@ -78,16 +78,31 @@ export const SkinCard: React.FC<SkinCardProps> = ({
 
       {/* Weapon Display Render */}
       <div className="relative z-10 my-3 sm:my-6 py-2 sm:py-4 flex items-center justify-center min-h-[90px] sm:min-h-[160px]">
-        <img
-          src={skin.displayIcon}
-          alt={skin.displayName}
-          className="max-h-[70px] sm:max-h-[130px] max-w-[95%] object-contain filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.7)] group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-          onError={(e) => {
-            e.currentTarget.src =
-              'https://media.valorant-api.com/weaponskins/d8d5d7a1-4d81-8560-54bc-0692ab40f69b/displayicon.png';
-          }}
-        />
+        {(() => {
+          const rawIcon = skin.displayIcon;
+          const isBroken = !rawIcon || rawIcon.includes('7122d78b-4e60-eb4d-5f65-738d7c1ce9ae');
+          const safeDisplayIcon = isBroken
+            ? skin.chromas?.[0]?.displayIcon ||
+              skin.chromas?.[0]?.fullRender ||
+              skin.levels?.[0]?.displayIcon ||
+              'https://media.valorant-api.com/weaponskinchromas/df1786b2-4f3d-f207-b92c-0780f4dffb79/displayicon.png'
+            : rawIcon;
+
+          return (
+            <img
+              src={safeDisplayIcon}
+              alt={skin.displayName}
+              className="max-h-[70px] sm:max-h-[130px] max-w-[95%] object-contain filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.7)] group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.src =
+                  skin.chromas?.[0]?.displayIcon ||
+                  skin.levels?.[0]?.displayIcon ||
+                  'https://media.valorant-api.com/weaponskins/d8d5d7a1-4d81-8560-54bc-0692ab40f69b/displayicon.png';
+              }}
+            />
+          );
+        })()}
       </div>
 
       {/* Footer: Name, Chromas preview, Price & Inspect */}

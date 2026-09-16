@@ -251,3 +251,39 @@ export const DEMO_NIGHT_MARKET_SKINS = [
     levels: [],
   },
 ];
+
+export const COMPETITIVE_TIERS: Record<number, string> = {
+  0: 'UNRANKED',
+  1: 'Unused 1',
+  2: 'Unused 2',
+  3: 'IRON 1',
+  4: 'IRON 2',
+  5: 'IRON 3',
+  6: 'BRONZE 1',
+  7: 'BRONZE 2',
+  8: 'BRONZE 3',
+  9: 'SILVER 1',
+  10: 'SILVER 2',
+  11: 'SILVER 3',
+  12: 'GOLD 1',
+  13: 'GOLD 2',
+  14: 'GOLD 3',
+  15: 'PLATINUM 1',
+  16: 'PLATINUM 2',
+  17: 'PLATINUM 3',
+  18: 'DIAMOND 1',
+  19: 'DIAMOND 2',
+  20: 'DIAMOND 3',
+  21: 'ASCENDANT 1',
+  22: 'ASCENDANT 2',
+  23: 'ASCENDANT 3',
+  24: 'IMMORTAL 1',
+  25: 'IMMORTAL 2',
+  26: 'IMMORTAL 3',
+  27: 'RADIANT',
+};
+
+export function getCompetitiveTierName(tier: number): string {
+  return COMPETITIVE_TIERS[tier] || (tier > 0 ? `RANK ${tier}` : 'UNRANKED');
+}
+

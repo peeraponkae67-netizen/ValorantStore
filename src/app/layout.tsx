@@ -16,6 +16,15 @@ const kanit = Kanit({
 export const metadata: Metadata = {
   title: "Valorant Daily Store Checker",
   description: "Daily Store For {Name} Remaining - Live Valorant store rotation checker by @peerap0nn_",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Valorant Store",
+  },
+  icons: {
+    apple: "/logo.jpg",
+  },
 };
 
 export const viewport: import('next').Viewport = {
@@ -23,6 +32,7 @@ export const viewport: import('next').Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#080c10',
 };
 
 import { LanguageProvider } from '@/contexts/LanguageContext';

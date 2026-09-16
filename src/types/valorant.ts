@@ -21,6 +21,7 @@ export interface SkinLevel {
   uuid: string;
   displayName: string;
   levelItem: string | null;
+  displayIcon?: string | null;
   streamedVideo: string | null;
 }
 
@@ -60,6 +61,26 @@ export interface FeaturedBundleData {
   items: SkinOffer[];
 }
 
+export interface PlayerMMR {
+  currentTier: number;
+  currentTierName: string;
+  rankingInTier: number;
+  mmrChangeToLastGame: number;
+}
+
+export interface MatchHistoryItem {
+  matchId: string;
+  mapId: string;
+  matchStartTime: number;
+  tierAfterUpdate: number;
+  tierBeforeUpdate: number;
+  rankedRatingAfterUpdate: number;
+  rankedRatingBeforeUpdate: number;
+  rankedRatingEarned: number;
+  rankedRatingPerformanceBonus: number;
+  competitiveMovement: 'INCREASE' | 'DECREASE' | 'PROMOTED' | 'DEMOTED' | 'SAME';
+}
+
 export interface DailyStoreData {
   player: {
     name: string;
@@ -75,6 +96,9 @@ export interface DailyStoreData {
   wallet: ValorantWallet;
   nightMarket?: NightMarketData | null;
   featuredBundle?: FeaturedBundleData | null;
+  featuredBundles?: FeaturedBundleData[];
+  mmr?: PlayerMMR | null;
+  matchHistory?: MatchHistoryItem[];
   isDemo?: boolean;
 }
 
@@ -88,3 +112,16 @@ export interface RiotSession {
   entitlementsToken: string;
   expiresAt: number;
 }
+
+export interface SavedAccount {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  region: Region;
+  level?: number;
+  playerCard?: string;
+  session: RiotSession;
+  cachedStore?: DailyStoreData;
+  lastActive: number;
+}
+

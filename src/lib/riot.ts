@@ -1,5 +1,5 @@
-import { Region, RiotSession, DailyStoreData, SkinOffer, SkinTier } from '@/types/valorant';
-import { REGION_SHARDS, TIERS, DEFAULT_TIER, DEMO_ROTATION_SKINS, DEMO_NIGHT_MARKET_SKINS } from './constants';
+import { Region, RiotSession, DailyStoreData, SkinOffer, SkinTier, FeaturedBundleData } from '@/types/valorant';
+import { REGION_SHARDS, TIERS, DEFAULT_TIER, DEMO_ROTATION_SKINS, DEMO_NIGHT_MARKET_SKINS, getCompetitiveTierName } from './constants';
 
 const CLIENT_PLATFORM =
   'ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9';
@@ -10,20 +10,27 @@ const RIOT_CLIENT_USER_AGENT =
 // Cache Valorant API skin catalogue to avoid repeated calls
 let cachedSkinsMap: Map<string, any> | null = null;
 let cachedTiersMap: Map<string, SkinTier> | null = null;
+let cachedAccessoriesMap: Map<string, { displayName: string; displayIcon: string; type: string }> | null = null;
 
 export async function fetchValorantApiCatalog() {
-  if (cachedSkinsMap && cachedTiersMap) {
-    return { skins: cachedSkinsMap, tiers: cachedTiersMap };
+  if (cachedSkinsMap && cachedTiersMap && cachedAccessoriesMap) {
+    return { skins: cachedSkinsMap, tiers: cachedTiersMap, accessories: cachedAccessoriesMap };
   }
 
   try {
-    const [skinsRes, tiersRes] = await Promise.all([
+    const [skinsRes, tiersRes, buddiesRes, cardsRes, spraysRes] = await Promise.all([
       fetch('https://valorant-api.com/v1/weapons/skins', { next: { revalidate: 3600 } }),
       fetch('https://valorant-api.com/v1/contenttiers', { next: { revalidate: 3600 } }),
+      fetch('https://valorant-api.com/v1/buddies', { next: { revalidate: 3600 } }).catch(() => null),
+      fetch('https://valorant-api.com/v1/playercards', { next: { revalidate: 3600 } }).catch(() => null),
+      fetch('https://valorant-api.com/v1/sprays', { next: { revalidate: 3600 } }).catch(() => null),
     ]);
 
     const skinsJson = await skinsRes.json();
     const tiersJson = await tiersRes.json();
+    const buddiesJson = buddiesRes && buddiesRes.ok ? await buddiesRes.json() : null;
+    const cardsJson = cardsRes && cardsRes.ok ? await cardsRes.json() : null;
+    const spraysJson = spraysRes && spraysRes.ok ? await spraysRes.json() : null;
 
     const tiersMap = new Map<string, SkinTier>();
     if (tiersJson?.data) {
@@ -44,6 +51,15 @@ export async function fetchValorantApiCatalog() {
     const skinsMap = new Map<string, any>();
     if (skinsJson?.data) {
       for (const skin of skinsJson.data) {
+        // Fix Riot placeholder icon bug (e.g. Sovereign Guardian root displayIcon is Riot's placeholder X box)
+        if (skin.displayIcon && skin.displayIcon.includes('7122d78b-4e60-eb4d-5f65-738d7c1ce9ae')) {
+          skin.displayIcon =
+            skin.chromas?.[0]?.displayIcon ||
+            skin.chromas?.[0]?.fullRender ||
+            skin.levels?.[0]?.displayIcon ||
+            skin.displayIcon;
+        }
+
         skinsMap.set(skin.uuid, skin);
         // Also map level uuids
         if (skin.levels) {
@@ -54,14 +70,46 @@ export async function fetchValorantApiCatalog() {
       }
     }
 
+    const accessoriesMap = new Map<string, { displayName: string; displayIcon: string; type: string }>();
+    if (buddiesJson?.data) {
+      for (const b of buddiesJson.data) {
+        const item = { displayName: b.displayName, displayIcon: b.displayIcon, type: 'Gun Buddy' };
+        accessoriesMap.set(b.uuid, item);
+        if (b.levels) {
+          for (const l of b.levels) {
+            accessoriesMap.set(l.uuid, item);
+          }
+        }
+      }
+    }
+    if (cardsJson?.data) {
+      for (const c of cardsJson.data) {
+        const item = { displayName: c.displayName, displayIcon: c.largeArt || c.displayIcon, type: 'Player Card' };
+        accessoriesMap.set(c.uuid, item);
+      }
+    }
+    if (spraysJson?.data) {
+      for (const s of spraysJson.data) {
+        const item = { displayName: s.displayName, displayIcon: s.fullTransparentIcon || s.displayIcon, type: 'Spray' };
+        accessoriesMap.set(s.uuid, item);
+        if (s.levels) {
+          for (const l of s.levels) {
+            accessoriesMap.set(l.uuid, item);
+          }
+        }
+      }
+    }
+
     cachedSkinsMap = skinsMap;
     cachedTiersMap = tiersMap;
-    return { skins: skinsMap, tiers: tiersMap };
+    cachedAccessoriesMap = accessoriesMap;
+    return { skins: skinsMap, tiers: tiersMap, accessories: accessoriesMap };
   } catch (error) {
     console.warn('Failed to fetch Valorant API catalog, using local tier definitions', error);
     return {
       skins: new Map<string, any>(),
       tiers: new Map(Object.entries(TIERS)),
+      accessories: new Map<string, any>(),
     };
   }
 }
@@ -95,7 +143,20 @@ export async function authenticateRiotUser(
       }),
     });
 
-    const initCookies = initRes.headers.get('set-cookie') || '';
+    // Parse clean cookies (name=val only)
+    const extractCleanCookies = (res: Response): string => {
+      const setCookies: string[] =
+        typeof (res.headers as any).getSetCookie === 'function'
+          ? (res.headers as any).getSetCookie()
+          : (res.headers.get('set-cookie') ? [res.headers.get('set-cookie')!] : []);
+
+      return setCookies
+        .map((c) => c.split(';')[0].trim())
+        .filter(Boolean)
+        .join('; ');
+    };
+
+    const rawInitCookies = extractCleanCookies(initRes);
 
     // Step 2: Submit username and password
     const authRes = await fetch('https://auth.riotgames.com/api/v1/authorization', {
@@ -103,7 +164,7 @@ export async function authenticateRiotUser(
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': RIOT_CLIENT_USER_AGENT,
-        Cookie: initCookies,
+        Cookie: rawInitCookies,
       },
       body: JSON.stringify({
         type: 'auth',
@@ -114,14 +175,16 @@ export async function authenticateRiotUser(
       }),
     });
 
-    const authCookies = authRes.headers.get('set-cookie') || initCookies;
+    const rawAuthCookies = extractCleanCookies(authRes);
+    const combinedCookies = [rawInitCookies, rawAuthCookies].filter(Boolean).join('; ');
+
     const authData = await authRes.json();
 
     if (authData.type === 'multifactor') {
       return {
         success: false,
         multifactor: true,
-        cookies: authCookies,
+        cookies: combinedCookies,
       };
     }
 
@@ -298,14 +361,20 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
 
   let storeRes: Response | null = null;
   let walletRes: Response | null = null;
+  let matchHistoryJson: any = null;
+  let playerMmrJson: any = null;
   
   const sUrl = `https://pd.${shard}.a.pvp.net/store/v3/storefront/${puuid}`;
   const wUrl = `https://pd.${shard}.a.pvp.net/store/v1/wallet/${puuid}`;
+  const compUrl = `https://pd.${shard}.a.pvp.net/mmr/v1/players/${puuid}/competitiveupdates?startIndex=0&endIndex=10&queue=competitive`;
+  const playerMmrUrl = `https://pd.${shard}.a.pvp.net/mmr/v1/players/${puuid}`;
   
   try {
-    const [s, w] = await Promise.all([
+    const [s, w, compRes, playerMmrRes] = await Promise.all([
       fetch(sUrl, { method: 'POST', headers: pvpHeaders, body: '{}', cache: 'no-store' }),
       fetch(wUrl, { headers: pvpHeaders, cache: 'no-store' }).catch(() => null),
+      fetch(compUrl, { headers: pvpHeaders, cache: 'no-store' }).catch(() => null),
+      fetch(playerMmrUrl, { headers: pvpHeaders, cache: 'no-store' }).catch(() => null),
     ]);
     
     if (!s.ok) {
@@ -315,11 +384,21 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
     
     storeRes = s;
     walletRes = w;
+    if (compRes && compRes.ok) {
+      matchHistoryJson = await compRes.json().catch(() => null);
+    }
+    if (playerMmrRes && playerMmrRes.ok) {
+      playerMmrJson = await playerMmrRes.json().catch(() => null);
+    }
   } catch (err: any) {
+    const errorMsg = err?.message || '';
+    if (errorMsg.includes('BAD_CLAIMS') || errorMsg.includes('RSO Access Token')) {
+      throw new Error(`Token ของคุณหมดอายุแล้ว กรุณาล็อกอินใหม่ (Token expired for ${gameName}#${tagLine})`);
+    }
     throw new Error(`Riot API rejected the request for player ${gameName}#${tagLine}. Details: ${err.message}`);
   }
 
-  const { skins: skinsCatalog, tiers: tiersCatalog } = await fetchValorantApiCatalog();
+  const { skins: skinsCatalog, tiers: tiersCatalog, accessories: accessoriesCatalog } = await fetchValorantApiCatalog();
 
   let storeJson: any = null;
   let walletJson: any = null;
@@ -371,8 +450,13 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
       uuid: skinUuid,
       displayName: catalogItem?.displayName || 'Valorant Weapon Skin',
       displayIcon:
-        catalogItem?.displayIcon ||
+        (catalogItem?.displayIcon && !catalogItem.displayIcon.includes('7122d78b-4e60-eb4d-5f65-738d7c1ce9ae')
+          ? catalogItem.displayIcon
+          : null) ||
+        catalogItem?.chromas?.[0]?.displayIcon ||
+        catalogItem?.chromas?.[0]?.fullRender ||
         catalogItem?.levels?.[0]?.displayIcon ||
+        catalogItem?.displayIcon ||
         'https://media.valorant-api.com/weaponskins/d8d5d7a1-4d81-8560-54bc-0692ab40f69b/displayicon.png',
       tier,
       price,
@@ -391,6 +475,7 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
           uuid: l.uuid,
           displayName: l.displayName,
           levelItem: l.levelItem,
+          displayIcon: l.displayIcon || null,
           streamedVideo: l.streamedVideo,
         })) || [],
       wallpaper: catalogItem?.wallpaper || null,
@@ -442,52 +527,63 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
     };
   }
 
-  // Parse Featured Bundle
+  // Parse Featured Bundles (supporting multiple concurrent bundles)
   let featuredBundle = null;
+  const featuredBundles: FeaturedBundleData[] = [];
+
   if (storeJson.FeaturedBundle && storeJson.FeaturedBundle.Bundles && storeJson.FeaturedBundle.Bundles.length > 0) {
-    const mainBundle = storeJson.FeaturedBundle.Bundles[0];
-    const bundleUuid = mainBundle.DataAssetID;
-    const bundleRemainingSeconds = storeJson.FeaturedBundle.BundleRemainingDurationInSeconds || 0;
-    
-    let bundleDisplayName = 'Featured Bundle';
-    let bundleDisplayIcon = 'https://media.valorant-api.com/bundles/69d9b2be-4439-0785-780b-ba8951053683/displayicon.png';
-    
-    try {
-      const bRes = await fetch(`https://valorant-api.com/v1/bundles/${bundleUuid}`);
-      if (bRes.ok) {
-        const bJson = await bRes.json();
-        if (bJson?.data) {
-          bundleDisplayName = bJson.data.displayName || bundleDisplayName;
-          bundleDisplayIcon = bJson.data.displayIcon || bJson.data.displayIcon2 || bundleDisplayIcon;
+    const rawBundles = storeJson.FeaturedBundle.Bundles;
+    const fallbackRemainingSeconds = storeJson.FeaturedBundle.BundleRemainingDurationInSeconds || 0;
+
+    for (const b of rawBundles) {
+      const bundleUuid = b.DataAssetID;
+      const bundleRemainingSeconds = b.BundleRemainingDurationInSeconds || fallbackRemainingSeconds;
+
+      let bundleDisplayName = 'Featured Bundle';
+      let bundleDisplayIcon = 'https://media.valorant-api.com/bundles/69d9b2be-4439-0785-780b-ba8951053683/displayicon.png';
+
+      try {
+        const bRes = await fetch(`https://valorant-api.com/v1/bundles/${bundleUuid}`);
+        if (bRes.ok) {
+          const bJson = await bRes.json();
+          if (bJson?.data) {
+            bundleDisplayName = bJson.data.displayName || bundleDisplayName;
+            bundleDisplayIcon = bJson.data.displayIcon || bJson.data.displayIcon2 || bundleDisplayIcon;
+          }
         }
+      } catch (e) {
+        // ignore
       }
-    } catch(e) {
-      // ignore
-    }
-    
-    let totalPrice = 0;
-    let originalTotalPrice = 0;
-    const items: SkinOffer[] = [];
-    
-    if (mainBundle.Items) {
-      for (const item of mainBundle.Items) {
-        const itemPrice = item.DiscountedPrice || 0;
-        const basePrice = item.BasePrice || 0;
-        totalPrice += itemPrice;
-        originalTotalPrice += basePrice;
-        
-        const reward = item.Item;
-        // Weapon skins have ItemTypeID e7c63390-eda7-46e0-bb7a-a6abdacd2433
-        if (reward && reward.ItemTypeID === 'e7c63390-eda7-46e0-bb7a-a6abdacd2433') { 
-          const skinUuid = reward.ItemID;
-          const catalogItem = skinsCatalog.get(skinUuid);
+
+      let totalPrice = 0;
+      let originalTotalPrice = 0;
+      const items: SkinOffer[] = [];
+
+      if (b.Items) {
+        for (const item of b.Items) {
+          const itemPrice = item.DiscountedPrice || 0;
+          const basePrice = item.BasePrice || 0;
+          totalPrice += itemPrice;
+          originalTotalPrice += basePrice;
+
+          const reward = item.Item;
+          const skinUuid = reward?.ItemID;
+          const catalogItem = skinUuid ? skinsCatalog.get(skinUuid) : null;
           if (catalogItem) {
             const tierUuid = catalogItem.contentTierUuid;
             const tier = (tierUuid && (tiersCatalog.get(tierUuid) || TIERS[tierUuid])) || DEFAULT_TIER;
             items.push({
               uuid: skinUuid,
               displayName: catalogItem.displayName || 'Unknown Skin',
-              displayIcon: catalogItem.displayIcon || catalogItem.levels?.[0]?.displayIcon || '',
+              displayIcon:
+                (catalogItem.displayIcon && !catalogItem.displayIcon.includes('7122d78b-4e60-eb4d-5f65-738d7c1ce9ae')
+                  ? catalogItem.displayIcon
+                  : null) ||
+                catalogItem.chromas?.[0]?.displayIcon ||
+                catalogItem.chromas?.[0]?.fullRender ||
+                catalogItem.levels?.[0]?.displayIcon ||
+                catalogItem.displayIcon ||
+                '',
               tier,
               price: itemPrice,
               originalPrice: basePrice,
@@ -505,23 +601,117 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
                 uuid: l.uuid,
                 displayName: l.displayName,
                 levelItem: l.levelItem,
+                displayIcon: l.displayIcon || null,
                 streamedVideo: l.streamedVideo,
               })) || [],
               wallpaper: catalogItem.wallpaper || null,
             });
+          } else if (skinUuid && accessoriesCatalog) {
+            const acc = accessoriesCatalog.get(skinUuid);
+            if (acc) {
+              items.push({
+                uuid: skinUuid,
+                displayName: acc.displayName || 'Accessory',
+                displayIcon: acc.displayIcon || '',
+                tier: DEFAULT_TIER,
+                price: itemPrice,
+                originalPrice: basePrice,
+                discountPercent: item.DiscountPercent || 0,
+                weaponType: acc.type,
+                chromas: [],
+                levels: [],
+                wallpaper: null,
+              });
+            }
           }
         }
       }
+
+      if (totalPrice === 0 && b.TotalDiscountCost) {
+        totalPrice = b.TotalDiscountCost;
+      }
+      if (originalTotalPrice === 0 && b.TotalBaseCost) {
+        originalTotalPrice = b.TotalBaseCost;
+      }
+
+      featuredBundles.push({
+        uuid: bundleUuid,
+        displayName: bundleDisplayName,
+        displayIcon: bundleDisplayIcon,
+        price: totalPrice,
+        originalPrice: originalTotalPrice || totalPrice,
+        remainingDuration: bundleRemainingSeconds,
+        items,
+      });
     }
 
-    featuredBundle = {
-      uuid: bundleUuid,
-      displayName: bundleDisplayName,
-      displayIcon: bundleDisplayIcon,
-      price: totalPrice,
-      originalPrice: originalTotalPrice,
-      remainingDuration: bundleRemainingSeconds,
-      items: items,
+    if (featuredBundles.length > 0) {
+      featuredBundle = featuredBundles[0];
+    }
+  }
+
+  let mmr = null;
+  let matchHistory = [];
+  
+  // Filter only valid competitive matches
+  const rawMatches = matchHistoryJson?.Matches || [];
+  const competitiveMatches = rawMatches.filter((m: any) => {
+    if (!m) return false;
+    // Exclude matches that are not competitive updates (e.g. MOVEMENT_UNKNOWN with 0 tier & 0 RR earned)
+    const isUnknown =
+      m.CompetitiveMovement === 'MOVEMENT_UNKNOWN' &&
+      (m.TierAfterUpdate ?? 0) === 0 &&
+      (m.RankedRatingEarned ?? 0) === 0;
+    return !isUnknown;
+  });
+
+  if (competitiveMatches.length > 0) {
+    matchHistory = competitiveMatches.slice(0, 10).map((m: any) => ({
+      matchId: m.MatchID,
+      mapId: m.MapID,
+      matchStartTime: m.MatchStartTime,
+      tierAfterUpdate: m.TierAfterUpdate ?? 0,
+      tierBeforeUpdate: m.TierBeforeUpdate ?? 0,
+      rankedRatingAfterUpdate: m.RankedRatingAfterUpdate ?? 0,
+      rankedRatingBeforeUpdate: m.RankedRatingBeforeUpdate ?? 0,
+      rankedRatingEarned: m.RankedRatingEarned ?? 0,
+      rankedRatingPerformanceBonus: m.RankedRatingPerformanceBonus ?? 0,
+      competitiveMovement: m.CompetitiveMovement,
+    }));
+    
+    const latestMatch = competitiveMatches[0];
+    const tier = latestMatch.TierAfterUpdate ?? 0;
+    mmr = {
+      currentTier: tier,
+      currentTierName: getCompetitiveTierName(tier),
+      rankingInTier: latestMatch.RankedRatingAfterUpdate ?? 0,
+      mmrChangeToLastGame: latestMatch.RankedRatingEarned ?? 0,
+    };
+  }
+
+  // If mmr is still not available or tier is 0, check playerMmrJson for current seasonal rating
+  if ((!mmr || mmr.currentTier === 0) && playerMmrJson?.QueueSkills?.competitive?.SeasonalInfoBySeasonID) {
+    const seasons = Object.values(playerMmrJson.QueueSkills.competitive.SeasonalInfoBySeasonID) as any[];
+    const activeSeason =
+      seasons.slice().reverse().find((s: any) => (s?.CompetitiveTier ?? 0) > 0) ||
+      seasons[seasons.length - 1];
+    if (activeSeason) {
+      const tier = activeSeason.CompetitiveTier ?? 0;
+      mmr = {
+        currentTier: tier,
+        currentTierName: getCompetitiveTierName(tier),
+        rankingInTier: activeSeason.RankedRating ?? 0,
+        mmrChangeToLastGame: mmr?.mmrChangeToLastGame ?? 0,
+      };
+    }
+  }
+
+  if (!mmr) {
+    mmr = {
+      currentTier: 0,
+      currentTierName: 'UNRANKED',
+      rankingInTier: 0,
+      mmrChangeToLastGame: 0,
     };
   }
 
@@ -544,6 +734,9 @@ export async function getPlayerStorefront(session: RiotSession): Promise<DailySt
     },
     nightMarket,
     featuredBundle,
+    featuredBundles,
+    mmr,
+    matchHistory,
     isDemo: false,
   };
 }
@@ -592,6 +785,38 @@ export function generateDemoStoreData(
       remainingDuration: remainingDuration * 3,
       items: DEMO_ROTATION_SKINS,
     },
+    mmr: {
+      currentTier: 24, // Radiant
+      currentTierName: 'Radiant',
+      rankingInTier: 550,
+      mmrChangeToLastGame: 21,
+    },
+    matchHistory: [
+      {
+        matchId: 'demo-match-1',
+        mapId: 'Ascent',
+        matchStartTime: Date.now() - 3600000,
+        tierAfterUpdate: 24,
+        tierBeforeUpdate: 24,
+        rankedRatingAfterUpdate: 550,
+        rankedRatingBeforeUpdate: 529,
+        rankedRatingEarned: 21,
+        rankedRatingPerformanceBonus: 0,
+        competitiveMovement: 'INCREASE',
+      },
+      {
+        matchId: 'demo-match-2',
+        mapId: 'Bind',
+        matchStartTime: Date.now() - 86400000,
+        tierAfterUpdate: 24,
+        tierBeforeUpdate: 24,
+        rankedRatingAfterUpdate: 529,
+        rankedRatingBeforeUpdate: 545,
+        rankedRatingEarned: -16,
+        rankedRatingPerformanceBonus: 0,
+        competitiveMovement: 'DECREASE',
+      }
+    ],
     isDemo: true,
   };
 }
